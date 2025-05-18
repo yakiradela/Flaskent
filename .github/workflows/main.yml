@@ -45,11 +45,11 @@ jobs:
       # Step 1: Create S3 + DynamoDB for backend
       ##############################################
       - name: Terraform Init for S3 & DynamoDB
-        working-directory: flask-app/bootstrap
+        working-directory: flask-app/infra/bootstrap
         run: terraform init
 
       - name: Terraform Apply S3 & DynamoDB
-        working-directory: flask-app/bootstrap
+        working-directory: flask-app/infra/bootstrap
         run: terraform apply -auto-approve
 
       ##############################################
