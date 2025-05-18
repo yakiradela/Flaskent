@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'infra/**'
+      - 'app/**'
+      - 'helm/**'
+      - '.github/workflows/**'
 
 env:
   AWS_REGION: us-east-2
@@ -69,7 +74,9 @@ jobs:
       ##############################################
 
       - name: Login to Amazon ECR
-        run: aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
+        run: |
+          aws ecr get-login-password --region $AWS_REGION \
+            | docker login --username AWS --password-stdin $ECR_URL
 
       - name: Build Docker image
         working-directory: app
@@ -83,14 +90,14 @@ jobs:
       ##############################################
 
       - name: Install kubectl
-        uses: aws/setup-kubectl@v3
-        with:
-          version: v1.29.0
+        run: |
+          curl -o kubectl https://s3.us-east-2.amazonaws.com/amazon-eks/1.29.0/2024-04-11/bin/linux/amd64/kubectl
+          chmod +x ./kubectl
+          sudo mv ./kubectl /usr/local/bin
 
       - name: Install Helm
-        uses: aws/setup-helm@v3
-        with:
-          version: v3.13.0
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
       - name: Update kubeconfig
         run: |
