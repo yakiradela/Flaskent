@@ -38,19 +38,6 @@ jobs:
         with:
           terraform_version: 1.6.0
 
-      ####################################################################
-      # שלב 0: יצירת והרכבת IAM Policies למשתמש yakir
-      ####################################################################
-      - name: Init Terraform (IAM setup)
-        working-directory: flask-app/infra/bootstrap
-        run: terraform init
-
-      - name: Apply IAM Policies to user yakir
-        working-directory: flask-app/infra/bootstrap
-        run: |
-          terraform apply -auto-approve \
-            -target=aws_iam_user_policy_attachment.attach_s3_policy \
-            -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
 
       ####################################################################
       # שלב 1: יצירת ה-backend (S3 bucket + DynamoDB)
