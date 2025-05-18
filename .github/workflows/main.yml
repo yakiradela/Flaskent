@@ -17,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      ####################################################################
+      # שלב 1: Checkout + AWS credentials + Terraform setup
+      ####################################################################
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -33,29 +36,30 @@ jobs:
           terraform_version: 1.6.0
 
       ####################################################################
-      # הרשאות IAM למשתמש yakir (ini,plan,apply)
+      # שלב 2: יצירת הרשאות IAM למשתמש yakir (Policies)
       ####################################################################
       - name: Terraform Init for IAM Policies
         working-directory: flask-app/infra/bootstrap
-        run: terraform init
+        run: terraform init -reconfigure
 
       - name: Terraform Apply IAM Policies
         working-directory: flask-app/infra/bootstrap
-        run: |
-          terraform apply -auto-approve
-      ####################################################################
-      # יצירת dynamodb + s3(init,plan,apply)
-      ####################################################################
-      - name: Terraform Init for Backend
-        working-directory: flask-app/infra/bootstrap
-        run: terraform init -reconfigure
+        run: terraform apply -auto-approve \
+          -target=aws_iam_user_policy_attachment.attach_s3_policy \
+          -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
 
-      - name: Terraform Apply Backend
+      - name: Wait for IAM policies to propagate
+        run: sleep 15
+
+      ####################################################################
+      # שלב 3: יצירת backend (S3 + DynamoDB)
+      ####################################################################
+      - name: Terraform Apply for Backend
         working-directory: flask-app/infra/bootstrap
         run: terraform apply -auto-approve
 
       ####################################################################
-      # יצירת vpc,private subnet,public subnet,eks,nodes,ecr.
+      # שלב 4: תשתית מלאה - VPC, EKS, Node Groups, ECR וכו'
       ####################################################################
       - name: Terraform Init for Infra
         working-directory: flask-app/infra
@@ -70,7 +74,7 @@ jobs:
         run: terraform apply -auto-approve tfplan
 
       ####################################################################
-      # התחברות,בנייה ודחיפה לתוך -repo שיצרתי בinfra.
+      # שלב 5: Build & Push Docker Image ל-ECR
       ####################################################################
       - name: Login to Amazon ECR
         run: |
@@ -84,7 +88,7 @@ jobs:
         run: docker push $ECR_URL/$ECR_REPOSITORY:latest
 
       ####################################################################
-      # התקנת kubectl,התקנת helm,והפעלת האפליקצייה
+      # שלב 6: Deploy עם Helm ל-EKS
       ####################################################################
       - name: Install kubectl
         run: |
