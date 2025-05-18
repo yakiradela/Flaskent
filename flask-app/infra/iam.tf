@@ -62,7 +62,7 @@ resource "aws_iam_role_policy_attachment" "ecr_read_only" {
 }
 
 #################################################
-# IAM Policy: Terraform S3 Access (Backend + Create)
+# IAM Policy: Terraform S3 Full Access for Backend
 #################################################
 
 resource "aws_iam_policy" "terraform_s3_access" {
@@ -74,31 +74,23 @@ resource "aws_iam_policy" "terraform_s3_access" {
       {
         Effect = "Allow",
         Action = [
-          "s3:CreateBucket"
-        ],
-        Resource = "*"  # נדרש עבור CreateBucket בלבד
-      },
-      {
-        Effect = "Allow",
-        Action = [
+          "s3:CreateBucket",
           "s3:PutBucketAcl",
           "s3:GetBucketLocation",
           "s3:ListBucket",
           "s3:GetObject",
           "s3:PutObject",
-          "s3:DeleteObject"
+          "s3:DeleteObject",
+          "s3:ListAllMyBuckets"
         ],
-        Resource = [
-          "arn:aws:s3:::terraform-state--bucketxyz123",
-          "arn:aws:s3:::terraform-state--bucketxyz123/*"
-        ]
+        Resource = "*"
       }
     ]
   })
 }
 
 #################################################
-# IAM Policy: Terraform DynamoDB Access
+# IAM Policy: Terraform DynamoDB Full Access for Backend
 #################################################
 
 resource "aws_iam_policy" "terraform_dynamodb_access" {
@@ -114,16 +106,19 @@ resource "aws_iam_policy" "terraform_dynamodb_access" {
           "dynamodb:DescribeTable",
           "dynamodb:GetItem",
           "dynamodb:PutItem",
-          "dynamodb:DeleteItem"
+          "dynamodb:DeleteItem",
+          "dynamodb:Scan",
+          "dynamodb:Query",
+          "dynamodb:UpdateItem"
         ],
-        Resource = "arn:aws:dynamodb:us-east-2:557690607676:table/terraform-locks"
+        Resource = "*"
       }
     ]
   })
 }
 
 #################################################
-# Attach the policies to IAM user "yakir"
+# Attach Policies to IAM User: yakir
 #################################################
 
 resource "aws_iam_user_policy_attachment" "attach_s3_policy" {
