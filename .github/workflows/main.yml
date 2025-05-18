@@ -46,7 +46,7 @@ jobs:
         run: terraform init -backend=false
 
       - name: Terraform Plan S3
-        working-directory: infra
+        working-directory: flask-app/infra
         run: terraform plan -target=aws_s3_bucket.terraform_state -out=s3.tfplan
 
       - name: Terraform Apply S3
