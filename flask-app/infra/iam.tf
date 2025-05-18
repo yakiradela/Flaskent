@@ -1,4 +1,3 @@
-
 #################################################
 # IAM Role for EKS Cluster
 #################################################
@@ -71,19 +70,23 @@ resource "aws_iam_policy" "terraform_s3_access" {
 
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Action = [
-        "s3:ListBucket",
-        "s3:GetObject",
-        "s3:PutObject",
-        "s3:DeleteObject"
-      ],
-      Resource = [
-        "arn:aws:s3:::terraform-state--bucketxyz123",
-        "arn:aws:s3:::terraform-state--bucketxyz123/*"
-      ]
-    }]
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:ListBucket",
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:CreateBucket",
+          "s3:GetBucketLocation"
+        ],
+        Resource = [
+          "arn:aws:s3:::terraform-state--bucketxyz123",
+          "arn:aws:s3:::terraform-state--bucketxyz123/*"
+        ]
+      }
+    ]
   })
 }
 
@@ -96,14 +99,32 @@ resource "aws_iam_policy" "terraform_dynamodb_access" {
 
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Action = [
-        "dynamodb:GetItem",
-        "dynamodb:PutItem",
-        "dynamodb:DeleteItem"
-      ],
-      Resource = "arn:aws:dynamodb:us-east-2:557690607676:table/terraform-locks"
-    }]
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:DescribeTable",
+          "dynamodb:CreateTable"
+        ],
+        Resource = "arn:aws:dynamodb:us-east-2:557690607676:table/terraform-locks"
+      }
+    ]
   })
+}
+
+#################################################
+# Attach Policies to IAM User 'yakir'
+#################################################
+
+resource "aws_iam_user_policy_attachment" "attach_s3_policy" {
+  user       = "yakir"
+  policy_arn = aws_iam_policy.terraform_s3_access.arn
+}
+
+resource "aws_iam_user_policy_attachment" "attach_dynamodb_policy" {
+  user       = "yakir"
+  policy_arn = aws_iam_policy.terraform_dynamodb_access.arn
 }
