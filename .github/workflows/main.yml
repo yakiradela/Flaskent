@@ -1,11 +1,12 @@
 name: CI/CD - Flask App on EKS
- 
+
 on:
   push:
     branches:
       - main
     paths:
       - 'infra/**'
+      - 'bootstrap/**'
       - 'app/**'
       - 'helm/**'
       - '.github/workflows/**'
@@ -18,13 +19,15 @@ env:
 
 jobs:
   deploy:
-    name: Deploy Infrastructure and App
+    name: Deploy Full Infrastructure & App
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout source code
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -32,33 +35,28 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # Terraform CLI
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
 
       ##############################################
-      # Step 1: Create S3 bucket for Terraform state
+      # Step 1: Create S3 + DynamoDB for backend
       ##############################################
+      - name: Terraform Init for S3 & DynamoDB
+        working-directory: flask-app/bootstrap
+        run: terraform init
 
-      - name: Terraform Init without backend (S3 only)
-        working-directory: flask-app/infra
-        run: terraform init -backend=false
-
-      - name: Terraform Plan S3
-        working-directory: flask-app/infra
-        run: terraform plan -target=aws_s3_bucket.terraform_state -out=s3.tfplan
-
-      - name: Terraform Apply S3
-        working-directory: flask-app/infra
-        run: terraform apply -auto-approve s3.tfplan
+      - name: Terraform Apply S3 & DynamoDB
+        working-directory: flask-app/bootstrap
+        run: terraform apply -auto-approve
 
       ##############################################
-      # Step 2: Full infrastructure (EKS, ECR, etc.)
+      # Step 2: Provision infrastructure (EKS, ECR)
       ##############################################
-
       - name: Terraform Init with backend
-        working-directory: infra
+        working-directory: flask-app/infra
         run: terraform init -reconfigure
 
       - name: Terraform Plan
@@ -70,34 +68,30 @@ jobs:
         run: terraform apply -auto-approve tfplan
 
       ##############################################
-      # Step 3: Docker Build & Push to ECR
+      # Step 3: Build & Push Docker image to ECR
       ##############################################
-
       - name: Login to Amazon ECR
-        run: |
-          aws ecr get-login-password --region $AWS_REGION \
-            | docker login --username AWS --password-stdin $ECR_URL
+        run: aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
 
       - name: Build Docker image
-        working-directory: app
+        working-directory: flask-app/app
         run: docker build -t $ECR_URL/$ECR_REPOSITORY:latest .
 
-      - name: Push Docker image to ECR
+      - name: Push Docker image
         run: docker push $ECR_URL/$ECR_REPOSITORY:latest
 
       ##############################################
-      # Step 4: Deploy with Helm to EKS
+      # Step 4: Deploy Flask app using Helm
       ##############################################
-
       - name: Install kubectl
-        run: |
-          curl -o kubectl https://s3.us-east-2.amazonaws.com/amazon-eks/1.29.0/2024-04-11/bin/linux/amd64/kubectl
-          chmod +x ./kubectl
-          sudo mv ./kubectl /usr/local/bin
+        uses: azure/setup-kubectl@v3
+        with:
+          version: v1.29.0
 
       - name: Install Helm
-        run: |
-          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.13.0
 
       - name: Update kubeconfig
         run: |
@@ -105,7 +99,7 @@ jobs:
 
       - name: Helm Deploy
         run: |
-          helm upgrade --install flask-app helm/flask-app \
+          helm upgrade --install flask-app flask-app/helm/flask-app \
             --set image.repository=$ECR_URL/$ECR_REPOSITORY \
             --set image.tag=latest \
             --set service.type=LoadBalancer
