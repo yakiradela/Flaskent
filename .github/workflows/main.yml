@@ -19,50 +19,49 @@ env:
 
 jobs:
   deploy:
-    name: Deploy Full Infrastructure & App
+    name: Deploy Infrastructure and App
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout source code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # AWS credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v3
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Terraform CLI
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.0
 
-      ##############################################
-      # Step 0: Attach IAM policies to user yakir
-      ##############################################
-      - name: Terraform Init for IAM Policies
+      #####################################################
+      # Step 0: Grant IAM permissions to user 'yakir'
+      #####################################################
+      - name: Terraform Init for IAM policies
         working-directory: flask-app/infra/bootstrap
         run: terraform init
 
-      - name: Terraform Attach Policies to User yakir
+      - name: Terraform Apply IAM policies
         working-directory: flask-app/infra/bootstrap
-        run: terraform apply -auto-approve -target=aws_iam_user_policy_attachment.attach_s3_policy -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
+        run: terraform apply -auto-approve \
+              -target=aws_iam_user_policy_attachment.attach_s3_policy \
+              -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
 
-      ##############################################
-      # Step 1: Create S3 + DynamoDB for backend
-      ##############################################
-      - name: Terraform Apply S3 & DynamoDB
+      #####################################################
+      # Step 1: Create Terraform backend (S3 + DynamoDB)
+      #####################################################
+      - name: Terraform Apply for Backend
         working-directory: flask-app/infra/bootstrap
         run: terraform apply -auto-approve
 
-      ##############################################
-      # Step 2: Provision infrastructure (EKS, ECR)
-      ##############################################
-      - name: Terraform Init with backend
+      #####################################################
+      # Step 2: Deploy full EKS & ECR infrastructure
+      #####################################################
+      - name: Terraform Init for Infra
         working-directory: flask-app/infra
         run: terraform init -reconfigure
 
@@ -70,15 +69,16 @@ jobs:
         working-directory: flask-app/infra
         run: terraform plan -out=tfplan
 
-      - name: Terraform Apply
+      - name: Terraform Apply Infra
         working-directory: flask-app/infra
         run: terraform apply -auto-approve tfplan
 
-      ##############################################
-      # Step 3: Build & Push Docker image to ECR
-      ##############################################
+      #####################################################
+      # Step 3: Build & Push Docker image to Amazon ECR
+      #####################################################
       - name: Login to Amazon ECR
-        run: aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
+        run: |
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
 
       - name: Build Docker image
         working-directory: flask-app/app
@@ -87,24 +87,23 @@ jobs:
       - name: Push Docker image
         run: docker push $ECR_URL/$ECR_REPOSITORY:latest
 
-      ##############################################
-      # Step 4: Deploy Flask app using Helm
-      ##############################################
+      #####################################################
+      # Step 4: Deploy Flask app using Helm on EKS
+      #####################################################
       - name: Install kubectl
-        uses: aws-actions/configure-kubectl@v2
-        with:
-          region: ${{ env.AWS_REGION }}
+        run: |
+          curl -LO "https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl"
+          chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
       - name: Install Helm
-        uses: aws-actions/setup-helm@v2
-        with:
-          version: v3.13.0
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
 
-      - name: Helm Deploy
+      - name: Deploy with Helm
         run: |
           helm upgrade --install flask-app flask-app/helm/flask-app \
             --set image.repository=$ECR_URL/$ECR_REPOSITORY \
