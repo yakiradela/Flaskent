@@ -1,4 +1,11 @@
 #################################################
+# IAM User - yakir (אם עוד לא קיים)
+#################################################
+resource "aws_iam_user" "yakir" {
+  name = "yakir"
+}
+
+#################################################
 # IAM Role for EKS Cluster
 #################################################
 resource "aws_iam_role" "eks_cluster_role" {
@@ -6,7 +13,7 @@ resource "aws_iam_role" "eks_cluster_role" {
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [{
+    Statement = [ {
       Effect = "Allow",
       Principal = {
         Service = "eks.amazonaws.com"
@@ -116,12 +123,12 @@ resource "aws_iam_policy" "terraform_dynamodb_access" {
 # Attach the policies to IAM user "yakir"
 #################################################
 resource "aws_iam_user_policy_attachment" "attach_s3_policy" {
-  user       = "yakir"
+  user       = aws_iam_user.yakir.name  # מקשר את ה-policy למשתמש yakir
   policy_arn = aws_iam_policy.terraform_s3_access.arn
 }
 
 resource "aws_iam_user_policy_attachment" "attach_dynamodb_policy" {
-  user       = "yakir"
+  user       = aws_iam_user.yakir.name  # מקשר את ה-policy למשתמש yakir
   policy_arn = aws_iam_policy.terraform_dynamodb_access.arn
 }
 
