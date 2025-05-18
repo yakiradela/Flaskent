@@ -91,7 +91,7 @@ jobs:
       # Step 4: Deploy Flask app using Helm
       ##############################################
       - name: Install kubectl
-        uses: aws-actions/configure-kubectl@v2
+        uses: aws-actions/configure-kubectl@v1
         with:
           region: ${{ env.AWS_REGION }}
 
