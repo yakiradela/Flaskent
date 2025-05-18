@@ -1,0 +1,104 @@
+name: CI/CD - Flask App on EKS
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: us-east-2
+  ECR_REPOSITORY: flask-app-repo
+  CLUSTER_NAME: eks-cluster
+  ECR_URL: 557690607676.dkr.ecr.us-east-2.amazonaws.com
+
+jobs:
+  deploy:
+    name: Deploy Infrastructure and App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      ##############################################
+      # Step 1: Create S3 bucket for Terraform state
+      ##############################################
+
+      - name: Terraform Init without backend (S3 only)
+        working-directory: infra
+        run: terraform init -backend=false
+
+      - name: Terraform Plan S3
+        working-directory: infra
+        run: terraform plan -target=aws_s3_bucket.terraform_state -out=s3.tfplan
+
+      - name: Terraform Apply S3
+        working-directory: infra
+        run: terraform apply -auto-approve s3.tfplan
+
+      ##############################################
+      # Step 2: Full infrastructure (EKS, ECR, etc.)
+      ##############################################
+
+      - name: Terraform Init with backend
+        working-directory: infra
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: infra
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: infra
+        run: terraform apply -auto-approve tfplan
+
+      ##############################################
+      # Step 3: Docker Build & Push to ECR
+      ##############################################
+
+      - name: Login to Amazon ECR
+        run: aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
+
+      - name: Build Docker image
+        working-directory: app
+        run: docker build -t $ECR_URL/$ECR_REPOSITORY:latest .
+
+      - name: Push Docker image to ECR
+        run: docker push $ECR_URL/$ECR_REPOSITORY:latest
+
+      ##############################################
+      # Step 4: Deploy with Helm to EKS
+      ##############################################
+
+      - name: Install kubectl
+        uses: aws/setup-kubectl@v3
+        with:
+          version: v1.29.0
+
+      - name: Install Helm
+        uses: aws/setup-helm@v3
+        with:
+          version: v3.13.0
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+
+      - name: Helm Deploy
+        run: |
+          helm upgrade --install flask-app helm/flask-app \
+            --set image.repository=$ECR_URL/$ECR_REPOSITORY \
+            --set image.tag=latest \
+            --set service.type=LoadBalancer
