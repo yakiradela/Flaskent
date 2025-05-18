@@ -1,5 +1,5 @@
 name: CI/CD - Flask App on EKS  
- 
+
 on:
   push:
     branches:
@@ -42,12 +42,21 @@ jobs:
           terraform_version: 1.6.0
 
       ##############################################
-      # Step 1: Create S3 + DynamoDB for backend
+      # Step 0: Attach IAM policies to user yakir
       ##############################################
-      - name: Terraform Init for S3 & DynamoDB
+      - name: Terraform Init for IAM Policies
         working-directory: flask-app/infra/bootstrap
         run: terraform init
 
+      - name: Terraform Attach Policies to User yakir
+        working-directory: flask-app/infra/bootstrap
+        run: terraform apply -auto-approve \
+              -target=aws_iam_user_policy_attachment.attach_s3_policy \
+              -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
+
+      ##############################################
+      # Step 1: Create S3 + DynamoDB for backend
+      ##############################################
       - name: Terraform Apply S3 & DynamoDB
         working-directory: flask-app/infra/bootstrap
         run: terraform apply -auto-approve
