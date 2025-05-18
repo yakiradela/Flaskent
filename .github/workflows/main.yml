@@ -47,9 +47,8 @@ jobs:
 
       - name: Terraform Apply IAM policies
         working-directory: flask-app/infra/bootstrap
-        run: terraform apply -auto-approve \
-              -target=aws_iam_user_policy_attachment.attach_s3_policy \
-              -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
+        run: terraform apply -auto-approve -target=aws_iam_user_policy_attachment.attach_s3_policy -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
+
 
       #####################################################
       # Step 1: Create Terraform backend (S3 + DynamoDB)
