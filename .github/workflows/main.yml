@@ -1,5 +1,5 @@
-name: CI/CD - Flask App on EKS     
-   
+name: CI/CD - Flask App on EKS
+
 on:
   push:
     branches:
@@ -18,8 +18,9 @@ env:
   ECR_URL: 557690607676.dkr.ecr.us-east-2.amazonaws.com
 
 jobs:
-  deploy:
-    name: Deploy Infrastructure and App
+  # Step 0: Grant permissions
+  grant-permissions:
+    name: Attach IAM Policies
     runs-on: ubuntu-latest
 
     steps:
@@ -38,29 +39,48 @@ jobs:
         with:
           terraform_version: 1.6.0
 
-      #####################################################
-      # Step 0: Grant IAM permissions to user 'yakir'
-      #####################################################
-      - name: Terraform Init for IAM policies
+      - name: Terraform Init for IAM
         working-directory: flask-app/infra/bootstrap
         run: terraform init
 
-      - name: Terraform Apply IAM policies
+      - name: Apply IAM Policies for user yakir
         working-directory: flask-app/infra/bootstrap
-        run: terraform apply -auto-approve -target=aws_iam_user_policy_attachment.attach_s3_policy -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
+        run: |
+          terraform apply -auto-approve \
+            -target=aws_iam_user_policy_attachment.attach_s3_policy \
+            -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
 
+  # Step 1-4: Deploy Infrastructure & App
+  deploy:
+    name: Deploy Infrastructure and App
+    runs-on: ubuntu-latest
+    needs: grant-permissions
 
-      #####################################################
-      # Step 1: Create Terraform backend (S3 + DynamoDB)
-      #####################################################
-      - name: Terraform Apply for Backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init for Backend
+        working-directory: flask-app/infra/bootstrap
+        run: terraform init
+
+      - name: Terraform Apply for Backend (S3 + DynamoDB)
         working-directory: flask-app/infra/bootstrap
         run: terraform apply -auto-approve
 
-      #####################################################
-      # Step 2: Deploy full EKS & ECR infrastructure
-      #####################################################
-      - name: Terraform Init for Infra
+      - name: Terraform Init Infra
         working-directory: flask-app/infra
         run: terraform init -reconfigure
 
@@ -72,9 +92,6 @@ jobs:
         working-directory: flask-app/infra
         run: terraform apply -auto-approve tfplan
 
-      #####################################################
-      # Step 3: Build & Push Docker image to Amazon ECR
-      #####################################################
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
@@ -86,9 +103,6 @@ jobs:
       - name: Push Docker image
         run: docker push $ECR_URL/$ECR_REPOSITORY:latest
 
-      #####################################################
-      # Step 4: Deploy Flask app using Helm on EKS
-      #####################################################
       - name: Install kubectl
         run: |
           curl -LO "https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl"
