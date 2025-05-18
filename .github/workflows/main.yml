@@ -4,12 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'infra/**'
-      - 'bootstrap/**'
-      - 'app/**'
-      - 'helm/**'
-      - '.github/workflows/**'
 
 env:
   AWS_REGION: us-east-2
@@ -39,7 +33,7 @@ jobs:
           terraform_version: 1.6.0
 
       ####################################################################
-      # שלב 0: החלת הרשאות IAM למשתמש yakir
+      # הרשאות IAM למשתמש yakir (ini,plan,apply)
       ####################################################################
       - name: Terraform Init for IAM Policies
         working-directory: flask-app/infra/bootstrap
@@ -48,12 +42,9 @@ jobs:
       - name: Terraform Apply IAM Policies
         working-directory: flask-app/infra/bootstrap
         run: |
-          terraform apply -auto-approve \
-            -target=aws_iam_user_policy_attachment.attach_s3_policy \
-            -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
-
+          terraform apply -auto-approve
       ####################################################################
-      # שלב 1: יצירת ה-backend (S3 bucket + DynamoDB)
+      # יצירת dynamodb + s3(init,plan,apply)
       ####################################################################
       - name: Terraform Init for Backend
         working-directory: flask-app/infra/bootstrap
@@ -64,7 +55,7 @@ jobs:
         run: terraform apply -auto-approve
 
       ####################################################################
-      # שלב 2: יצירת תשתית EKS, Node Groups, ECR וכו'
+      # יצירת vpc,private subnet,public subnet,eks,nodes,ecr.
       ####################################################################
       - name: Terraform Init for Infra
         working-directory: flask-app/infra
@@ -79,7 +70,7 @@ jobs:
         run: terraform apply -auto-approve tfplan
 
       ####################################################################
-      # שלב 3: Build & Push של Docker image ל-ECR
+      # התחברות,בנייה ודחיפה לתוך -repo שיצרתי בinfra.
       ####################################################################
       - name: Login to Amazon ECR
         run: |
@@ -93,7 +84,7 @@ jobs:
         run: docker push $ECR_URL/$ECR_REPOSITORY:latest
 
       ####################################################################
-      # שלב 4: Deploy עם Helm ל-EKS
+      # התקנת kubectl,התקנת helm,והפעלת האפליקצייה
       ####################################################################
       - name: Install kubectl
         run: |
