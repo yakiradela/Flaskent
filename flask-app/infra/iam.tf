@@ -1,13 +1,9 @@
-#################################################
-# IAM User - yakir (אם עוד לא קיים)
-#################################################
+
 resource "aws_iam_user" "yakir" {
   name = "yakir"
 }
 
-#################################################
-# IAM Role for EKS Cluster
-#################################################
+
 resource "aws_iam_role" "eks_cluster_role" {
   name = "eks-cluster-role"
 
@@ -33,9 +29,6 @@ resource "aws_iam_role_policy_attachment" "eks_service_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
 }
 
-#################################################
-# IAM Role for EKS Node Group
-#################################################
 resource "aws_iam_role" "eks_node_role" {
   name = "eks-node-role"
 
@@ -66,9 +59,6 @@ resource "aws_iam_role_policy_attachment" "ecr_read_only" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
-#################################################
-# IAM Policy: Terraform S3 Access (Create Bucket + Backend)
-#################################################
 resource "aws_iam_policy" "terraform_s3_access" {
   name = "TerraformS3Access"
 
@@ -95,9 +85,6 @@ resource "aws_iam_policy" "terraform_s3_access" {
   })
 }
 
-#################################################
-# IAM Policy: Terraform DynamoDB Access
-#################################################
 resource "aws_iam_policy" "terraform_dynamodb_access" {
   name = "TerraformDynamoDBAccess"
 
@@ -119,9 +106,6 @@ resource "aws_iam_policy" "terraform_dynamodb_access" {
   })
 }
 
-#################################################
-# Attach the policies to IAM user "yakir"
-#################################################
 resource "aws_iam_user_policy_attachment" "attach_s3_policy" {
   user       = aws_iam_user.yakir.name  # מקשר את ה-policy למשתמש yakir
   policy_arn = aws_iam_policy.terraform_s3_access.arn
