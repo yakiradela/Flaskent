@@ -62,7 +62,7 @@ resource "aws_iam_role_policy_attachment" "ecr_read_only" {
 }
 
 #################################################
-# IAM Policy: Terraform S3 Access (Create Bucket + Backend)
+# IAM Policy: Terraform S3 Access (Backend + Create)
 #################################################
 
 resource "aws_iam_policy" "terraform_s3_access" {
@@ -74,7 +74,13 @@ resource "aws_iam_policy" "terraform_s3_access" {
       {
         Effect = "Allow",
         Action = [
-          "s3:CreateBucket",
+          "s3:CreateBucket"
+        ],
+        Resource = "*"  # נדרש עבור CreateBucket בלבד
+      },
+      {
+        Effect = "Allow",
+        Action = [
           "s3:PutBucketAcl",
           "s3:GetBucketLocation",
           "s3:ListBucket",
