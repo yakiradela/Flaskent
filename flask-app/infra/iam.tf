@@ -1,132 +1,25 @@
-#################################################
-# IAM Role for EKS Cluster
-#################################################
-
-resource "aws_iam_role" "eks_cluster_role" {
-  name = "eks-cluster-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Principal = {
-        Service = "eks.amazonaws.com"
-      },
-      Action = "sts:AssumeRole"
-    }]
-  })
+resource "aws_s3_bucket" "terraform_state" {
+  bucket = "terraform-state--bucketxyz123"
+  region = "us-east-2"
 }
 
-resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
-  role       = aws_iam_role.eks_cluster_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+# acl הוא deprecated ולכן אנחנו משתמשים בaws_s3_bucket_acl
+resource "aws_s3_bucket_acl" "terraform_state_acl" {
+  bucket = aws_s3_bucket.terraform_state.id
+  acl    = "private"
 }
 
-resource "aws_iam_role_policy_attachment" "eks_service_policy" {
-  role       = aws_iam_role.eks_cluster_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
+resource "aws_dynamodb_table" "terraform_locks" {
+  name           = "terraform-locks"
+  hash_key       = "LockID"
+  read_capacity  = 5
+  write_capacity = 5
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+
+  billing_mode = "PROVISIONED"
 }
 
-#################################################
-# IAM Role for EKS Node Group
-#################################################
-
-resource "aws_iam_role" "eks_node_role" {
-  name = "eks-node-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Principal = {
-        Service = "ec2.amazonaws.com"
-      },
-      Action = "sts:AssumeRole"
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-}
-
-resource "aws_iam_role_policy_attachment" "ecr_read_only" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-}
-
-#################################################
-# IAM Policy: Terraform S3 Full Access for Backend
-#################################################
-
-resource "aws_iam_policy" "terraform_s3_access" {
-  name = "TerraformS3Access"
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "s3:CreateBucket",
-          "s3:PutBucketAcl",
-          "s3:GetBucketLocation",
-          "s3:ListBucket",
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject",
-          "s3:ListAllMyBuckets"
-        ],
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-#################################################
-# IAM Policy: Terraform DynamoDB Full Access for Backend
-#################################################
-
-resource "aws_iam_policy" "terraform_dynamodb_access" {
-  name = "TerraformDynamoDBAccess"
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "dynamodb:CreateTable",
-          "dynamodb:DescribeTable",
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:DeleteItem",
-          "dynamodb:Scan",
-          "dynamodb:Query",
-          "dynamodb:UpdateItem"
-        ],
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-#################################################
-# Attach Policies to IAM User: yakir
-#################################################
-
-resource "aws_iam_user_policy_attachment" "attach_s3_policy" {
-  user       = "yakir"
-  policy_arn = aws_iam_policy.terraform_s3_access.arn
-}
-
-resource "aws_iam_user_policy_attachment" "attach_dynamodb_policy" {
-  user       = "yakir"
-  policy_arn = aws_iam_policy.terraform_dynamodb_access.arn
-}
