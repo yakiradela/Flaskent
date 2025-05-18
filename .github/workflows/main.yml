@@ -38,26 +38,43 @@ jobs:
         with:
           terraform_version: 1.6.0
 
+      ####################################################################
+      # שלב 0: החלת הרשאות IAM למשתמש yakir
+      ####################################################################
+      - name: Terraform Init for IAM Policies
+        working-directory: flask-app/infra/bootstrap
+        run: terraform init
+
+      - name: Terraform Apply IAM Policies
+        working-directory: flask-app/infra/bootstrap
+        run: |
+          terraform apply -auto-approve \
+            -target=aws_iam_user_policy_attachment.attach_s3_policy \
+            -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
 
       ####################################################################
       # שלב 1: יצירת ה-backend (S3 bucket + DynamoDB)
       ####################################################################
-      - name: Terraform Apply for Backend (S3 + DynamoDB)
+      - name: Terraform Init for Backend
+        working-directory: flask-app/infra/bootstrap
+        run: terraform init -reconfigure
+
+      - name: Terraform Apply Backend
         working-directory: flask-app/infra/bootstrap
         run: terraform apply -auto-approve
 
       ####################################################################
       # שלב 2: יצירת תשתית EKS, Node Groups, ECR וכו'
       ####################################################################
-      - name: Init Terraform (Infra)
+      - name: Terraform Init for Infra
         working-directory: flask-app/infra
         run: terraform init -reconfigure
 
-      - name: Terraform Plan (Infra)
+      - name: Terraform Plan Infra
         working-directory: flask-app/infra
         run: terraform plan -out=tfplan
 
-      - name: Terraform Apply (Infra)
+      - name: Terraform Apply Infra
         working-directory: flask-app/infra
         run: terraform apply -auto-approve tfplan
 
@@ -68,15 +85,15 @@ jobs:
         run: |
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
 
-      - name: Build Docker image
+      - name: Build Docker Image
         working-directory: flask-app/app
         run: docker build -t $ECR_URL/$ECR_REPOSITORY:latest .
 
-      - name: Push Docker image
+      - name: Push Docker Image
         run: docker push $ECR_URL/$ECR_REPOSITORY:latest
 
       ####################################################################
-      # שלב 4: Deploy של האפליקציה ל-EKS עם Helm
+      # שלב 4: Deploy עם Helm ל-EKS
       ####################################################################
       - name: Install kubectl
         run: |
