@@ -44,7 +44,8 @@ jobs:
 
       - name: Terraform Apply IAM Policies
         working-directory: flask-app/infra/bootstrap
-        run: terraform apply -auto-approve \
+        run: |
+         terraform apply -auto-approve \
           -target=aws_iam_user_policy_attachment.attach_s3_policy \
           -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
 
