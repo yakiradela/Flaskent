@@ -80,8 +80,8 @@ resource "aws_iam_policy" "terraform_s3_access" {
           "s3:DeleteObject"
         ],
         Resource = [
-          "arn:aws:s3:::terraform-state-bucketxyz123",  # כאן העדכון
-          "arn:aws:s3:::terraform-state-bucketxyz123/*"
+          "arn:aws:s3:::*",  # גישה לכל ה-Buckets
+          "arn:aws:s3:::*/*"  # גישה לכל האובייקטים בתוך ה-Buckets
         ]
       }
     ]
