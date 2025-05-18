@@ -59,7 +59,7 @@ jobs:
 
       - name: Terraform Init with backend
         working-directory: infra
-        run: terraform init
+        run: terraform init -reconfigure
 
       - name: Terraform Plan
         working-directory: flask-app/infra
