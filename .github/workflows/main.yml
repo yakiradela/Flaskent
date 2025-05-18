@@ -44,6 +44,10 @@ jobs:
       ##############################################
       # Step 0: Attach IAM policies to user yakir
       ##############################################
+      - name: Terraform Init for IAM Policies
+        working-directory: flask-app/infra/bootstrap
+        run: terraform init
+
       - name: Terraform Attach Policies to User yakir
         working-directory: flask-app/infra/bootstrap
         run: terraform apply -auto-approve -target=aws_iam_user_policy_attachment.attach_s3_policy -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
@@ -87,12 +91,12 @@ jobs:
       # Step 4: Deploy Flask app using Helm
       ##############################################
       - name: Install kubectl
-        uses: azure/setup-kubectl@v3
+        uses: aws-actions/configure-kubectl@v2
         with:
-          version: v1.29.0
+          region: ${{ env.AWS_REGION }}
 
       - name: Install Helm
-        uses: azure/setup-helm@v3
+        uses: aws-actions/setup-helm@v2
         with:
           version: v3.13.0
 
@@ -106,3 +110,4 @@ jobs:
             --set image.repository=$ECR_URL/$ECR_REPOSITORY \
             --set image.tag=latest \
             --set service.type=LoadBalancer
+
