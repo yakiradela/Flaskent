@@ -62,7 +62,7 @@ resource "aws_iam_role_policy_attachment" "ecr_read_only" {
 }
 
 #################################################
-# S3 Access Policy for Terraform Backend
+# IAM Policy: Terraform S3 Access (Create Bucket + Backend)
 #################################################
 
 resource "aws_iam_policy" "terraform_s3_access" {
@@ -74,12 +74,13 @@ resource "aws_iam_policy" "terraform_s3_access" {
       {
         Effect = "Allow",
         Action = [
+          "s3:CreateBucket",
+          "s3:PutBucketAcl",
+          "s3:GetBucketLocation",
           "s3:ListBucket",
           "s3:GetObject",
           "s3:PutObject",
-          "s3:DeleteObject",
-          "s3:CreateBucket",
-          "s3:GetBucketLocation"
+          "s3:DeleteObject"
         ],
         Resource = [
           "arn:aws:s3:::terraform-state--bucketxyz123",
@@ -91,7 +92,7 @@ resource "aws_iam_policy" "terraform_s3_access" {
 }
 
 #################################################
-# DynamoDB Access Policy for Terraform Backend
+# IAM Policy: Terraform DynamoDB Access
 #################################################
 
 resource "aws_iam_policy" "terraform_dynamodb_access" {
@@ -103,11 +104,11 @@ resource "aws_iam_policy" "terraform_dynamodb_access" {
       {
         Effect = "Allow",
         Action = [
+          "dynamodb:CreateTable",
+          "dynamodb:DescribeTable",
           "dynamodb:GetItem",
           "dynamodb:PutItem",
-          "dynamodb:DeleteItem",
-          "dynamodb:DescribeTable",
-          "dynamodb:CreateTable"
+          "dynamodb:DeleteItem"
         ],
         Resource = "arn:aws:dynamodb:us-east-2:557690607676:table/terraform-locks"
       }
@@ -116,7 +117,7 @@ resource "aws_iam_policy" "terraform_dynamodb_access" {
 }
 
 #################################################
-# Attach Policies to IAM User 'yakir'
+# Attach the policies to IAM user "yakir"
 #################################################
 
 resource "aws_iam_user_policy_attachment" "attach_s3_policy" {
