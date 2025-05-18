@@ -1,6 +1,3 @@
-provider "aws" {
-  region = "us-east-2"
-}
 
 #################################################
 # IAM Role for EKS Cluster
