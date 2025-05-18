@@ -83,7 +83,7 @@ jobs:
       ##############################################
 
       - name: Install kubectl
-        uses: aws/setup-kubectl@v3
+        uses: aws/setup-kubectl@v2
         with:
           version: v1.29.0
 
