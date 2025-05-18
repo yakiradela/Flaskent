@@ -42,7 +42,7 @@ jobs:
       ##############################################
 
       - name: Terraform Init without backend (S3 only)
-        working-directory: infra
+        working-directory: flask-app/infra
         run: terraform init -backend=false
 
       - name: Terraform Plan S3
@@ -50,7 +50,7 @@ jobs:
         run: terraform plan -target=aws_s3_bucket.terraform_state -out=s3.tfplan
 
       - name: Terraform Apply S3
-        working-directory: infra
+        working-directory: flask-app/infra
         run: terraform apply -auto-approve s3.tfplan
 
       ##############################################
@@ -62,11 +62,11 @@ jobs:
         run: terraform init
 
       - name: Terraform Plan
-        working-directory: infra
+        working-directory: flask-app/infra
         run: terraform plan -out=tfplan
 
       - name: Terraform Apply
-        working-directory: infra
+        working-directory: flask-app/infra
         run: terraform apply -auto-approve tfplan
 
       ##############################################
