@@ -60,9 +60,9 @@ jobs:
       ####################################################################
       # שלב 3: יצירת backend (S3 + DynamoDB)
       ####################################################################
-  #    - name: Terraform Apply for Backend
-        # working-directory: flask-app/infra/bootstrap
-        #run: terraform apply -auto-approve
+      - name: Terraform Apply for Backend
+           working-directory: flask-app/infra/bootstrap
+           run: terraform apply -auto-approve
 
       ####################################################################
       # שלב 4: תשתית מלאה - VPC, EKS, Node Groups, ECR וכו'
