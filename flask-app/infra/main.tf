@@ -1,7 +1,3 @@
- resource "aws_s3_bucket" "terraform_state" {
-  bucket = "terraform-state--bucketxyz123"
- }
-
 
 # VPC
 resource "aws_vpc" "main_vpc" {
