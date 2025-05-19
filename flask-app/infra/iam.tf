@@ -1,10 +1,15 @@
-# ===== תפקידים ל-EKS Cluster =====
+# יצירת משתמש IAM חדש (לצורך הדגמה – זה לא המשתמש שמריץ את Terraform בפועל)
+resource "aws_iam_user" "yakir" {
+  name = "yakir"
+}
+
+# === תפקידים ל-EKS Cluster ול-Node Group ===
 resource "aws_iam_role" "eks_cluster_role" {
   name = "eks-cluster-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [ {
+    Statement = [{
       Effect = "Allow",
       Principal = {
         Service = "eks.amazonaws.com"
@@ -24,7 +29,6 @@ resource "aws_iam_role_policy_attachment" "eks_service_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
 }
 
-# ===== תפקידים ל-EKS Nodes =====
 resource "aws_iam_role" "eks_node_role" {
   name = "eks-node-role"
 
@@ -55,7 +59,7 @@ resource "aws_iam_role_policy_attachment" "ecr_read_only" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
-# ===== S3 Permissions for Terraform =====
+# === מדיניות מותאמות אישית לגישה ל-S3 ול-DynamoDB ===
 resource "aws_iam_policy" "terraform_s3_access" {
   name = "TerraformS3Access"
 
@@ -80,7 +84,6 @@ resource "aws_iam_policy" "terraform_s3_access" {
   })
 }
 
-# ===== DynamoDB Permissions for Terraform =====
 resource "aws_iam_policy" "terraform_dynamodb_access" {
   name = "TerraformDynamoDBAccess"
 
@@ -95,41 +98,50 @@ resource "aws_iam_policy" "terraform_dynamodb_access" {
         "dynamodb:PutItem",
         "dynamodb:DeleteItem"
       ],
-      Resource = "arn:aws:dynamodb:us-east-2:<ACCOUNT_ID>:table/terraform-locks"
+      Resource = "arn:aws:dynamodb:us-east-2:557690607676:table/terraform-locks"
     }]
   })
 }
 
-# ===== Allow PassRole so yakirpip can assign the roles to EKS =====
-resource "aws_iam_policy" "passrole_policy" {
-  name = "AllowPassRoleToEKS"
+# === צירוף המדיניות למשתמש yakir ===
+resource "aws_iam_user_policy_attachment" "attach_s3_policy" {
+  user       = aws_iam_user.yakir.name 
+  policy_arn = aws_iam_policy.terraform_s3_access.arn
+}
+
+resource "aws_iam_user_policy_attachment" "attach_dynamodb_policy" {
+  user       = aws_iam_user.yakir.name  
+  policy_arn = aws_iam_policy.terraform_dynamodb_access.arn
+}
+
+# === חסר: צירוף הרשאות למשתמש שמריץ את Terraform (yakirpip) ===
+# פתרון: הוסף ידנית למשתמש yakirpip את המדיניות הזו דרך ה-AWS Console:
+# או צור אותה פה כמדיניות מנוהלת
+
+resource "aws_iam_policy" "terraform_admin_policy" {
+  name = "TerraformAdminPolicy"
 
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
       Effect = "Allow",
-      Action = "iam:PassRole",
-      Resource = [
-        aws_iam_role.eks_cluster_role.arn,
-        aws_iam_role.eks_node_role.arn
-      ]
+      Action = [
+        "iam:*",
+        "ec2:*",
+        "s3:*",
+        "ecr:*",
+        "eks:*",
+        "dynamodb:*",
+        "sts:AssumeRole"
+      ],
+      Resource = "*"
     }]
   })
 }
 
-# ===== Attach all needed policies to the current user yakirpip =====
-resource "aws_iam_user_policy_attachment" "attach_s3_policy" {
-  user       = "yakirpip"
-  policy_arn = aws_iam_policy.terraform_s3_access.arn
-}
-
-resource "aws_iam_user_policy_attachment" "attach_dynamodb_policy" {
-  user       = "yakirpip"
-  policy_arn = aws_iam_policy.terraform_dynamodb_access.arn
-}
-
-resource "aws_iam_user_policy_attachment" "attach_passrole_policy" {
-  user       = "yakirpip"
-  policy_arn = aws_iam_policy.passrole_policy.arn
-}
-
+# **צירוף למשתמש yakirpip - רק אם תריץ את זה כ-root או admin**
+# otherwise, תעשה זאת ידנית ב-AWS Console
+# resource "aws_iam_user_policy_attachment" "attach_admin_policy" {
+#   user       = "yakirpip"
+#   policy_arn = aws_iam_policy.terraform_admin_policy.arn
+# }
