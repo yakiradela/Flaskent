@@ -19,8 +19,8 @@ resource "aws_iam_role" "eks_cluster_role" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
-  role       = aws_iam_role.eks_cluster_role.name
+resource "aws_iam_role_policy_attachment" "attach_admin_policy_yakirpip" {
+  role       = "yakirpip"
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
@@ -143,6 +143,6 @@ resource "aws_iam_user" "yakirpip" {
 }
 
 resource "aws_iam_user_policy_attachment" "attach_admin_policy_yakirpip" {
-  user       = aws_iam_user.yakirpip.name # ✅ נוספה בלוק זה
+  user       = "yakirpip" # ✅ נוספה בלוק זה
   policy_arn = aws_iam_policy.terraform_admin_policy.arn
 }
