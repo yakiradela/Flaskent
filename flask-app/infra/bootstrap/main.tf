@@ -5,8 +5,11 @@
 
  resource "aws_s3_bucket" "terraform_state" {
   bucket = "terraform-state--bucketxyz123"
-  acl    = "private"
+  tags = {
+    Name        = "Terraform State"
+    Environment = "Dev"
   }
+}
 
  resource "aws_dynamodb_table" "terraform_locks" {
   name         = "terraform-locks"
