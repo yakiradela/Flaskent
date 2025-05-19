@@ -19,8 +19,8 @@ resource "aws_iam_role" "eks_cluster_role" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "attach_admin_policy_yakirpip" {
-  role       = "yakirpip"
+resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
+  role       = aws_iam_role.eks_cluster_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
@@ -103,14 +103,14 @@ resource "aws_iam_policy" "terraform_dynamodb_access" {
   })
 }
 
-# === צירוף המדיניות למשתמש yakir ===
+# === צירוף המדיניות למשתמש yakirpip ===
 resource "aws_iam_user_policy_attachment" "attach_s3_policy" {
-  user       = aws_iam_user.yakir.name 
+  user       = aws_iam_user.yakirpip.name 
   policy_arn = aws_iam_policy.terraform_s3_access.arn
 }
 
 resource "aws_iam_user_policy_attachment" "attach_dynamodb_policy" {
-  user       = aws_iam_user.yakir.name  
+  user       = aws_iam_user.yakirpip.name  
   policy_arn = aws_iam_policy.terraform_dynamodb_access.arn
 }
 
@@ -136,12 +136,9 @@ resource "aws_iam_policy" "terraform_admin_policy" {
   })
 }
 
-# ✅ צירוף המדיניות למשתמש yakirpip (במידה ויש הרשאות לעשות זאת)
-resource "aws_iam_user" "yakirpip" {
-  name = "yakirpip" # 🔧 נוספה שורה זו כדי לאפשר הצמדה למשתמש קיים או חדש
-}
-
+# צירוף המדיניות למשתמש yakirpip
 resource "aws_iam_user_policy_attachment" "attach_admin_policy_yakirpip" {
   user       = aws_iam_user.yakirpip.name
   policy_arn = aws_iam_policy.terraform_admin_policy.arn
 }
+
