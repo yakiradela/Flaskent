@@ -1,4 +1,4 @@
-hcl
+
 # === מדיניות אדמין למשתמש yakirpip (מריץ Terraform) ===
 resource "aws_iam_policy" "terraform_admin_policy" {
   name = "TerraformAdminPolicy"
