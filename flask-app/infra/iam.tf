@@ -133,7 +133,7 @@ resource "aws_iam_role_policy_attachment" "eks_kms_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AWSKeyManagementServicePowerUser"
 }
 
-resource "aws_iam_role_policy_attachment" "eks_kms_policy" {
+resource "aws_iam_role_policy_attachment" "eks_kms2_policy" {
   role       = aws_iam_role.eks_node_role.name
   policy_arn = "arn:aws:iam::aws:policy/AWSKeyManagementServicePowerUser"
 }
