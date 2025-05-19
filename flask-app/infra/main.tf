@@ -31,7 +31,7 @@ resource "aws_subnet" "private_subnet" {
 # קלאסטר EKS
 resource "aws_eks_cluster" "eks_cluster" {
   name     = var.eks_cluster_name
-  role_arn = "arn:aws:iam::557690607676:role/eksClusterRole"  # להוסיף ידנית הרשאות
+  role_arn =  aws_iam_role.eks_cluster_role.arn # להוסיף ידנית הרשאות
 
   vpc_config {
     subnet_ids = [aws_subnet.public_subnet.id, aws_subnet.private_subnet.id]
