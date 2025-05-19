@@ -139,10 +139,9 @@ resource "aws_iam_policy" "terraform_admin_policy" {
 # ✅ צירוף המדיניות למשתמש yakirpip (במידה ויש הרשאות לעשות זאת)
 resource "aws_iam_user" "yakirpip" {
   name = "yakirpip" # 🔧 נוספה שורה זו כדי לאפשר הצמדה למשתמש קיים או חדש
-  force_destroy = true
 }
 
 resource "aws_iam_user_policy_attachment" "attach_admin_policy_yakirpip" {
-  user       = "yakirpip" # ✅ נוספה בלוק זה
+  user       = aws_iam_user.yakirpip.name
   policy_arn = aws_iam_policy.terraform_admin_policy.arn
 }
