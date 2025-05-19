@@ -107,12 +107,12 @@ resource "aws_iam_policy" "terraform_dynamodb_access" {
 }
 
 resource "aws_iam_user_policy_attachment" "attach_s3_policy" {
-  user       = aws_iam_user.yakir.name  # מקשר את ה-policy למשתמש yakir
+  user       = aws_iam_user.yakir.name 
   policy_arn = aws_iam_policy.terraform_s3_access.arn
 }
 
 resource "aws_iam_user_policy_attachment" "attach_dynamodb_policy" {
-  user       = aws_iam_user.yakir.name  # מקשר את ה-policy למשתמש yakir
+  user       = aws_iam_user.yakir.name  
   policy_arn = aws_iam_policy.terraform_dynamodb_access.arn
 }
 
