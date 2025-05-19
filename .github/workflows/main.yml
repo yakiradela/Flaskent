@@ -42,6 +42,11 @@ jobs:
         working-directory: flask-app/infra/bootstrap
         run: terraform init -reconfigure
 
+      - name: Clean Terraform state
+        run : |
+          rm -rf .terraform terraform.tfstate \
+          terraform.tfstate.backup
+
       - name: Terraform Apply IAM Policies
         working-directory: flask-app/infra/bootstrap
         run: |
