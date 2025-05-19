@@ -5,7 +5,7 @@ resource "aws_iam_policy" "terraform_admin_policy" {
 
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [{
+    Statement = [ {
       Effect   = "Allow",
       Action   = [
         "iam:*",
@@ -25,6 +25,40 @@ resource "aws_iam_policy" "terraform_admin_policy" {
 resource "aws_iam_user_policy_attachment" "attach_admin_policy_yakirpip" {
   user       = "yakirpip"
   policy_arn = aws_iam_policy.terraform_admin_policy.arn
+}
+
+# === יצירת IAM Role עבור EKS Node Group ===
+resource "aws_iam_role" "eks_node_role" {
+  name = "eksNodeRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action    = "sts:AssumeRole"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+        Effect    = "Allow"
+        Sid       = ""
+      },
+    ]
+  })
+
+  tags = {
+    Name = "eksNodeRole"
+  }
+}
+
+# צירוף מדיניות ל- IAM Role של ה-Node Group
+resource "aws_iam_role_policy_attachment" "eks_node_policy" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_vpc_policy" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonVPCFullAccess"
 }
 
 # VPC
@@ -94,38 +128,4 @@ resource "aws_eks_node_group" "node_group_private" {
 # מאגר ECR
 resource "aws_ecr_repository" "flask_app_ecr" {
   name = "flask-app-repository"
-}
-
-# === יצירת IAM Role עבור EKS Node Group ===
-resource "aws_iam_role" "eks_node_role" {
-  name = "eksNodeRole"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action    = "sts:AssumeRole"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
-        Effect    = "Allow"
-        Sid       = ""
-      },
-    ]
-  })
-
-  tags = {
-    Name = "eksNodeRole"
-  }
-}
-
-# צירוף מדיניות ל- IAM Role של ה-Node Group
-resource "aws_iam_role_policy_attachment" "eks_node_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_vpc_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonVPCFullAccess"
 }
