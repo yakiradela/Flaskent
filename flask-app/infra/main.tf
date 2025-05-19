@@ -2,10 +2,6 @@
   bucket = "terraform-state--bucketxyz123"
  }
 
-resource "aws_s3_bucket_acl" "terraform_state_acl" {
-  bucket = aws_s3_bucket.terraform_state.id
-  acl    = "private"
-}
 
 # VPC
 resource "aws_vpc" "main_vpc" {
@@ -47,7 +43,7 @@ resource "aws_eks_cluster" "eks_cluster" {
 resource "aws_eks_node_group" "node_group_public" {
   cluster_name    = aws_eks_cluster.eks_cluster.name
   node_group_name = "node-group-public"
-  node_role_arn   = "arn:aws:iam::557690607676:role/eksNodeRole"
+   node_role_arn = aws_iam_role.eks_node_role.arn
   subnet_ids      = [aws_subnet.public_subnet.id]
 
   scaling_config {
