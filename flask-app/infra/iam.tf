@@ -1,9 +1,4 @@
-
-resource "aws_iam_user" "yakir" {
-  name = "yakir"
-}
-
-
+# ===== תפקידים ל-EKS Cluster =====
 resource "aws_iam_role" "eks_cluster_role" {
   name = "eks-cluster-role"
 
@@ -29,6 +24,7 @@ resource "aws_iam_role_policy_attachment" "eks_service_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
 }
 
+# ===== תפקידים ל-EKS Nodes =====
 resource "aws_iam_role" "eks_node_role" {
   name = "eks-node-role"
 
@@ -59,60 +55,81 @@ resource "aws_iam_role_policy_attachment" "ecr_read_only" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
+# ===== S3 Permissions for Terraform =====
 resource "aws_iam_policy" "terraform_s3_access" {
   name = "TerraformS3Access"
 
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "s3:CreateBucket",
-          "s3:PutBucketAcl",
-          "s3:GetBucketLocation",
-          "s3:ListBucket",
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
-        ],
-        Resource = [
-          "arn:aws:s3:::*",  # גישה לכל ה-Buckets
-          "arn:aws:s3:::*/*"  # גישה לכל האובייקטים בתוך ה-Buckets
-        ]
-      }
-    ]
+    Statement = [{
+      Effect = "Allow",
+      Action = [
+        "s3:CreateBucket",
+        "s3:PutBucketAcl",
+        "s3:GetBucketLocation",
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      Resource = [
+        "arn:aws:s3:::*",
+        "arn:aws:s3:::*/*"
+      ]
+    }]
   })
 }
 
+# ===== DynamoDB Permissions for Terraform =====
 resource "aws_iam_policy" "terraform_dynamodb_access" {
   name = "TerraformDynamoDBAccess"
 
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "dynamodb:CreateTable",
-          "dynamodb:DescribeTable",
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:DeleteItem"
-        ],
-        Resource = "arn:aws:dynamodb:us-east-2:557690607676:table/terraform-locks"
-      }
-    ]
+    Statement = [{
+      Effect = "Allow",
+      Action = [
+        "dynamodb:CreateTable",
+        "dynamodb:DescribeTable",
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:DeleteItem"
+      ],
+      Resource = "arn:aws:dynamodb:us-east-2:<ACCOUNT_ID>:table/terraform-locks"
+    }]
   })
 }
 
+# ===== Allow PassRole so yakirpip can assign the roles to EKS =====
+resource "aws_iam_policy" "passrole_policy" {
+  name = "AllowPassRoleToEKS"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Action = "iam:PassRole",
+      Resource = [
+        aws_iam_role.eks_cluster_role.arn,
+        aws_iam_role.eks_node_role.arn
+      ]
+    }]
+  })
+}
+
+# ===== Attach all needed policies to the current user yakirpip =====
 resource "aws_iam_user_policy_attachment" "attach_s3_policy" {
-  user       = aws_iam_user.yakir.name 
+  user       = "yakirpip"
   policy_arn = aws_iam_policy.terraform_s3_access.arn
 }
 
 resource "aws_iam_user_policy_attachment" "attach_dynamodb_policy" {
-  user       = aws_iam_user.yakir.name  
+  user       = "yakirpip"
   policy_arn = aws_iam_policy.terraform_dynamodb_access.arn
+}
+
+resource "aws_iam_user_policy_attachment" "attach_passrole_policy" {
+  user       = "yakirpip"
+  policy_arn = aws_iam_policy.passrole_policy.arn
 }
 
