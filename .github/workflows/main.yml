@@ -1,4 +1,4 @@
-name: CI/CD - Flask App on EKS      
+name: CI/CD - Flask App on EKS       
  
 on:
   push:
