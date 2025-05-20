@@ -4,45 +4,112 @@ module "bootstrap" {
 
 # VPC
 resource "aws_vpc" "main_vpc" {
-  cidr_block = var.vpc_cidr
+  cidr_block           = var.vpc_cidr
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+  tags = {
+    Name = "main-vpc"
+  }
 }
 
-# תת-רשת ציבורית
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main_vpc.id
+}
+
+resource "aws_eip" "nat_eip" {
+  vpc = true
+}
+
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.public_subnet.id
+  depends_on    = [aws_internet_gateway.igw]
+}
+
+# DHCP Options
+resource "aws_vpc_dhcp_options" "dhcp_options" {
+  domain_name_servers = ["AmazonProvidedDNS"]
+}
+
+resource "aws_vpc_dhcp_options_association" "dhcp_association" {
+  vpc_id          = aws_vpc.main_vpc.id
+  dhcp_options_id = aws_vpc_dhcp_options.dhcp_options.id
+}
+
+# Subnets
 resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.main_vpc.id
   cidr_block              = var.public_subnet_cidr
   availability_zone       = "us-east-2a"
   map_public_ip_on_launch = true
   tags = {
-    Name = "public-subnet"
+    Name                                      = "public-subnet"
+    "kubernetes.io/cluster/${var.eks_cluster_name}" = "owned"
+    "kubernetes.io/role/elb"                 = "1"
   }
 }
 
-# תת-רשת פרטית
 resource "aws_subnet" "private_subnet" {
   vpc_id            = aws_vpc.main_vpc.id
   cidr_block        = var.private_subnet_cidr
   availability_zone = "us-east-2b"
   tags = {
-    Name = "private-subnet"
+    Name                                      = "private-subnet"
+    "kubernetes.io/cluster/${var.eks_cluster_name}" = "owned"
+    "kubernetes.io/role/internal-elb"        = "1"
   }
 }
 
-# קלאסטר EKS
+# Route Tables
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+}
+
+resource "aws_route_table_association" "public_assoc" {
+  subnet_id      = aws_subnet.public_subnet.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main_vpc.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat.id
+  }
+}
+
+resource "aws_route_table_association" "private_assoc" {
+  subnet_id      = aws_subnet.private_subnet.id
+  route_table_id = aws_route_table.private.id
+}
+
+# EKS Cluster
 resource "aws_eks_cluster" "eks_cluster" {
   name     = var.eks_cluster_name
-  role_arn =  aws_iam_role.eks_cluster_role.arn # להוסיף ידנית הרשאות
+  role_arn = aws_iam_role.eks_cluster_role.arn
 
   vpc_config {
-    subnet_ids = [aws_subnet.public_subnet.id, aws_subnet.private_subnet.id]
+    subnet_ids              = [aws_subnet.public_subnet.id, aws_subnet.private_subnet.id]
+    endpoint_private_access = true
+    endpoint_public_access  = true
+  }
+
+  tags = {
+    Name = "eks-cluster"
   }
 }
 
-# Node Group ציבורי
+# EKS Node Groups
 resource "aws_eks_node_group" "node_group_public" {
   cluster_name    = aws_eks_cluster.eks_cluster.name
   node_group_name = "node-group-public"
-   node_role_arn = aws_iam_role.eks_node_role.arn
+  node_role_arn   = aws_iam_role.eks_node_role.arn
   subnet_ids      = [aws_subnet.public_subnet.id]
 
   scaling_config {
@@ -50,13 +117,17 @@ resource "aws_eks_node_group" "node_group_public" {
     max_size     = 3
     min_size     = 1
   }
+
+  tags = {
+    "Name" = "node-group-public"
+    "kubernetes.io/cluster/${aws_eks_cluster.eks_cluster.name}" = "owned"
+  }
 }
 
-# Node Group פרטי
 resource "aws_eks_node_group" "node_group_private" {
   cluster_name    = aws_eks_cluster.eks_cluster.name
   node_group_name = "node-group-private"
-  node_role_arn   = "arn:aws:iam::557690607676:role/eksNodeRole"
+  node_role_arn   = aws_iam_role.eks_node_role.arn
   subnet_ids      = [aws_subnet.private_subnet.id]
 
   scaling_config {
@@ -64,10 +135,16 @@ resource "aws_eks_node_group" "node_group_private" {
     max_size     = 3
     min_size     = 1
   }
+
+  tags = {
+    "Name" = "node-group-private"
+    "kubernetes.io/cluster/${aws_eks_cluster.eks_cluster.name}" = "owned"
+  }
 }
 
-# מאגר ECR
+# ECR Repository
 resource "aws_ecr_repository" "flask_app_ecr" {
   name = "flask-app-repository"
 }
+
 
