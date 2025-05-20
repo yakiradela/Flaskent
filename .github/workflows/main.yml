@@ -60,20 +60,20 @@ jobs:
         run: sleep 15
 
       ####################################################################
-      # שלב 3: יצירת backend (S3 + DynamoDB) - רק פעם אחת
+      # שלב 3: יצירת backend (S3 + DynamoDB) - רק פעם אחת!
       ####################################################################
       - name: Terraform Init for Backend
         working-directory: flask-app/infra/bootstrap
         run: terraform init -reconfigure
 
-      - name: Terraform Apply for Backend (S3 & DynamoDB)
+      - name: Terraform Apply for Backend (S3 & DynamoDB) - רק בפעם הראשונה
         working-directory: flask-app/infra/bootstrap
         run: |
           terraform init -reconfigure
           terraform apply -auto-approve
 
       ####################################################################
-      # שלב 4: תשתית מלאה - VPC, EKS, Node Groups, ECR וכו' - לא מבצע פעם נוספת יצירת S3 ודינמו
+      # שלב 4: תשתית מלאה - VPC, EKS, Node Groups, ECR וכו' - לא מבצע יצירת S3 ודינמו שוב
       ####################################################################
       - name: Terraform Init for Full Infra
         working-directory: flask-app/infra
