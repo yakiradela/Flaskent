@@ -60,7 +60,7 @@ jobs:
         run: sleep 15
 
       ####################################################################
-      # שלב 3: יצירת backend (S3 + DynamoDB) - רק פעם אחת!
+      # שלב 3: יצירת backend (S3 + DynamoDB) - רק פעם אחת
       ####################################################################
       - name: Terraform Init for Backend
         working-directory: flask-app/infra/bootstrap
@@ -73,17 +73,15 @@ jobs:
           terraform apply -auto-approve
 
       ####################################################################
-      # שלב 4: תשתית מלאה - VPC, EKS, Node Groups, ECR וכו' - לא מבצע יצירת S3 ודינמו שוב
+      # שלב 4 (הוסר): לא מבוצע שוב apply על module.bootstrap
+      ####################################################################
+
+      ####################################################################
+      # שלב 5: Apply Infra (VPC, EKS, ECR וכו')
       ####################################################################
       - name: Terraform Init for Full Infra
         working-directory: flask-app/infra
         run: terraform init -reconfigure
-
-      - name: Terraform Apply - Bootstrap Module בלבד (בלי יצירת S3 ודינמו שוב)
-        working-directory: flask-app/infra
-        run: |
-          terraform init -reconfigure
-          terraform apply -auto-approve -target=module.eks  # לא לרוץ על module.bootstrap שוב
 
       - name: Terraform Plan Infra
         working-directory: flask-app/infra
@@ -98,7 +96,7 @@ jobs:
           terraform apply -auto-approve tfplan
 
       ####################################################################
-      # שלב 5: Build & Push Docker Image ל-ECR
+      # שלב 6: Build & Push Docker Image ל-ECR
       ####################################################################
       - name: Login to Amazon ECR
         run: |
@@ -112,7 +110,7 @@ jobs:
         run: docker push $ECR_URL/$ECR_REPOSITORY:latest
 
       ####################################################################
-      # שלב 6: Deploy עם Helm ל-EKS
+      # שלב 7: Deploy עם Helm ל-EKS
       ####################################################################
       - name: Install kubectl
         run: |
