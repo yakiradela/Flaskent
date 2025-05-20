@@ -17,9 +17,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      ######################################################################
+      ####################################################################
       # שלב 1: Checkout + AWS credentials + Terraform setup
-      ######################################################################
+      ####################################################################
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -35,9 +35,9 @@ jobs:
         with:
           terraform_version: 1.6.0
 
-      ######################################################################
+      ####################################################################
       # שלב 2: יצירת הרשאות IAM למשתמש yakir (Policies)
-      ######################################################################
+      ####################################################################
       - name: Terraform Init for IAM Policies
         working-directory: flask-app/infra/bootstrap
         run: terraform init -reconfigure
@@ -59,28 +59,27 @@ jobs:
       - name: Wait for IAM policies to propagate
         run: sleep 15
 
-      ######################################################################
-      # שלב 3: יצירת backend (S3 + DynamoDB) (הסר את השלב הזה אם המודול bootstrap כבר יוצר אותם)
-      ######################################################################
-      # אם המודול bootstrap כבר יוצר את ה-S3 וה-DynamoDB, אין צורך להפעיל את השלב הזה שוב
-      - name: Terraform Init for Backend (הסר אם המודול bootstrap כבר עושה את זה)
+      ####################################################################
+      # שלב 3: יצירת backend (S3 + DynamoDB) - רק פעם אחת
+      ####################################################################
+      - name: Terraform Init for Backend
         working-directory: flask-app/infra/bootstrap
         run: terraform init -reconfigure
 
-      - name: Terraform Apply for Backend (הסר אם המודול bootstrap כבר עושה את זה)
+      - name: Terraform Apply for Backend (S3 & DynamoDB)
         working-directory: flask-app/infra/bootstrap
         run: |
           terraform init -reconfigure
           terraform apply -auto-approve
 
-      ######################################################################
-      # שלב 4: תשתית מלאה - VPC, EKS, Node Groups, ECR וכו'
-      ######################################################################
+      ####################################################################
+      # שלב 4: תשתית מלאה - VPC, EKS, Node Groups, ECR וכו' - לא מבצע פעם נוספת יצירת S3 ודינמו
+      ####################################################################
       - name: Terraform Init for Full Infra
         working-directory: flask-app/infra
         run: terraform init -reconfigure
 
-      - name: Terraform Apply - Bootstrap Module בלבד
+      - name: Terraform Apply - Bootstrap Module בלבד (בלי יצירת S3 ודינמו שוב)
         working-directory: flask-app/infra
         run: |
           terraform init -reconfigure
@@ -98,9 +97,9 @@ jobs:
           terraform init -reconfigure
           terraform apply -auto-approve tfplan
 
-      ######################################################################
+      ####################################################################
       # שלב 5: Build & Push Docker Image ל-ECR
-      ######################################################################
+      ####################################################################
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
@@ -112,9 +111,9 @@ jobs:
       - name: Push Docker Image
         run: docker push $ECR_URL/$ECR_REPOSITORY:latest
 
-      ######################################################################
+      ####################################################################
       # שלב 6: Deploy עם Helm ל-EKS
-      ######################################################################
+      ####################################################################
       - name: Install kubectl
         run: |
           curl -LO "https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl"
