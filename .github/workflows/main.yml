@@ -39,6 +39,7 @@ jobs:
       # שלב 2: Terraform Init, Plan, and Apply
       ####################################################################
       - name: Terraform Init, Plan, and Apply
+        working-directory: flask-app/infra  # כאן אתה מגדיר את המיקום של קבצי Terraform
         run: |
           # Initialize Terraform configuration
           terraform init -reconfigure
