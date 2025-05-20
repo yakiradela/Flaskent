@@ -17,7 +17,7 @@ resource "aws_internet_gateway" "igw" {
 }
 
 resource "aws_eip" "nat_eip" {
-  vpc = true
+  domain = "vpc"
 }
 
 resource "aws_nat_gateway" "nat" {
@@ -26,7 +26,6 @@ resource "aws_nat_gateway" "nat" {
   depends_on    = [aws_internet_gateway.igw]
 }
 
-# DHCP Options
 resource "aws_vpc_dhcp_options" "dhcp_options" {
   domain_name_servers = ["AmazonProvidedDNS"]
 }
@@ -43,9 +42,9 @@ resource "aws_subnet" "public_subnet" {
   availability_zone       = "us-east-2a"
   map_public_ip_on_launch = true
   tags = {
-    Name                                      = "public-subnet"
+    Name                                        = "public-subnet"
     "kubernetes.io/cluster/${var.eks_cluster_name}" = "owned"
-    "kubernetes.io/role/elb"                 = "1"
+    "kubernetes.io/role/elb"                   = "1"
   }
 }
 
@@ -54,9 +53,9 @@ resource "aws_subnet" "private_subnet" {
   cidr_block        = var.private_subnet_cidr
   availability_zone = "us-east-2b"
   tags = {
-    Name                                      = "private-subnet"
+    Name                                        = "private-subnet"
     "kubernetes.io/cluster/${var.eks_cluster_name}" = "owned"
-    "kubernetes.io/role/internal-elb"        = "1"
+    "kubernetes.io/role/internal-elb"          = "1"
   }
 }
 
@@ -146,5 +145,4 @@ resource "aws_eks_node_group" "node_group_private" {
 resource "aws_ecr_repository" "flask_app_ecr" {
   name = "flask-app-repository"
 }
-
 
