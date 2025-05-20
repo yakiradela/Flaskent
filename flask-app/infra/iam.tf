@@ -1,4 +1,3 @@
-
 # === מדיניות אדמין למשתמש yakirpip (מריץ Terraform) ===
 resource "aws_iam_policy" "terraform_admin_policy" {
   name = "TerraformAdminPolicy"
@@ -47,7 +46,7 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
-# === IAM Role עבור Node Group (ec2) ===
+# === IAM Role עבור Node Group (EC2) ===
 resource "aws_iam_role" "eks_node_role" {
   name = "eksNodeRole"
 
@@ -67,75 +66,49 @@ resource "aws_iam_role" "eks_node_role" {
   }
 }
 
-# === חיבור מדיניות לתפקיד ה־Node Group ===
-resource "aws_iam_role_policy_attachment" "eks_node_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+# === מדיניות משולבת ל־Node Group ===
+resource "aws_iam_policy" "eks_node_combined_policy" {
+  name = "eksNodeCombinedPolicy"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "ec2:*",
+          "eks:Describe*",
+          "eks:List*",
+          "logs:*",
+          "cloudwatch:*",
+          "autoscaling:*",
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ssm:*",
+          "s3:*",
+          "dynamodb:*",
+          "secretsmanager:*",
+          "kms:*",
+          "elasticloadbalancing:*"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
 }
 
-resource "aws_iam_role_policy_attachment" "eks_vpc_policy" {
+resource "aws_iam_role_policy_attachment" "eks_node_combined_attach" {
   role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonVPCFullAccess"
+  policy_arn = aws_iam_policy.eks_node_combined_policy.arn
 }
 
+# === מדיניות אחת מנוהלת (הכרחית ונשמרת) ===
 resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
   role       = aws_iam_role.eks_node_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
-resource "aws_iam_role_policy_attachment" "eks_ecr_read_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_ssm_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_autoscaling_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AutoScalingFullAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_cloudwatch_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_elb_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonElasticLoadBalancingFullAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_logs_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_secretsmanager_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_dynamodb_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_s3_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_kms_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSKeyManagementServicePowerUser"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_kms2_policy" {
-  role       = aws_iam_role.eks_node_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSKeyManagementServicePowerUser"
-}
 
 
