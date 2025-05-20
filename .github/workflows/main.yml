@@ -36,67 +36,21 @@ jobs:
           terraform_version: 1.6.0
 
       ####################################################################
-      # שלב 2: יצירת הרשאות IAM למשתמש yakir (Policies)
+      # שלב 2: Terraform Init, Plan, and Apply
       ####################################################################
-      - name: Terraform Init for IAM Policies
-        working-directory: flask-app/infra/bootstrap
-        run: terraform init -reconfigure
-
-      - name: Clean Terraform state
+      - name: Terraform Init, Plan, and Apply
         run: |
-          rm -rf flask-app/infra/bootstrap/.terraform \
-          flask-app/infra/bootstrap/terraform.tfstate \
-          flask-app/infra/bootstrap/terraform.tfstate.backup
-
-      - name: Terraform Apply IAM Policies
-        working-directory: flask-app/infra/bootstrap
-        run: |
+          # Initialize Terraform configuration
           terraform init -reconfigure
-          terraform apply -auto-approve \
-            -target=aws_iam_user_policy_attachment.attach_s3_policy \
-            -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
 
-      - name: Wait for IAM policies to propagate
-        run: sleep 15
-
-      ####################################################################
-      # שלב 3: יצירת backend (S3 + DynamoDB) - רק פעם אחת
-      ####################################################################
-      - name: Terraform Init for Backend
-        working-directory: flask-app/infra/bootstrap
-        run: terraform init -reconfigure
-
-      - name: Terraform Apply for Backend (S3 & DynamoDB)
-        working-directory: flask-app/infra/bootstrap
-        run: |
-          terraform init -reconfigure
-          terraform apply -auto-approve
-
-      ####################################################################
-      # שלב 4 (הוסר): לא מבוצע שוב apply על module.bootstrap
-      ####################################################################
-
-      ####################################################################
-      # שלב 5: Apply Infra (VPC, EKS, ECR וכו')
-      ####################################################################
-      - name: Terraform Init for Full Infra
-        working-directory: flask-app/infra
-        run: terraform init -reconfigure
-
-      - name: Terraform Plan Infra
-        working-directory: flask-app/infra
-        run: |
-          terraform init -reconfigure
+          # Plan Terraform execution (includes everything)
           terraform plan -out=tfplan
 
-      - name: Terraform Apply Infra
-        working-directory: flask-app/infra
-        run: |
-          terraform init -reconfigure
+          # Apply the Terraform plan to create/update resources
           terraform apply -auto-approve tfplan
 
       ####################################################################
-      # שלב 6: Build & Push Docker Image ל-ECR
+      # שלב 3: Build & Push Docker Image ל-ECR
       ####################################################################
       - name: Login to Amazon ECR
         run: |
@@ -110,7 +64,7 @@ jobs:
         run: docker push $ECR_URL/$ECR_REPOSITORY:latest
 
       ####################################################################
-      # שלב 7: Deploy עם Helm ל-EKS
+      # שלב 4: Deploy עם Helm ל-EKS
       ####################################################################
       - name: Install kubectl
         run: |
