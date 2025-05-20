@@ -1,6 +1,3 @@
-module "bootstrap" {
-  source = "./bootstrap"
-}
 
 # VPC
 resource "aws_vpc" "main_vpc" {
