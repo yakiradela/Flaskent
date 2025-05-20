@@ -43,7 +43,7 @@ jobs:
         run: terraform init -reconfigure
 
       - name: Clean Terraform state
-        run : |
+        run: |
           rm -rf flask-app/infra/bootstrap/.terraform \
           flask-app/infra/bootstrap/terraform.tfstate \
           flask-app/infra/bootstrap/terraform.tfstate.backup
@@ -51,6 +51,7 @@ jobs:
       - name: Terraform Apply IAM Policies
         working-directory: flask-app/infra/bootstrap
         run: |
+          terraform init -reconfigure
           terraform apply -auto-approve \
             -target=aws_iam_user_policy_attachment.attach_s3_policy \
             -target=aws_iam_user_policy_attachment.attach_dynamodb_policy
@@ -67,7 +68,9 @@ jobs:
 
       - name: Terraform Apply for Backend
         working-directory: flask-app/infra/bootstrap
-        run: terraform apply -auto-approve
+        run: |
+          terraform init -reconfigure
+          terraform apply -auto-approve
 
       ####################################################################
       # שלב 4: תשתית מלאה - VPC, EKS, Node Groups, ECR וכו'
@@ -78,15 +81,21 @@ jobs:
 
       - name: Terraform Apply - Bootstrap Module בלבד
         working-directory: flask-app/infra
-        run: terraform apply -auto-approve -target=module.bootstrap
+        run: |
+          terraform init -reconfigure
+          terraform apply -auto-approve -target=module.bootstrap
 
       - name: Terraform Plan Infra
         working-directory: flask-app/infra
-        run: terraform plan -out=tfplan
+        run: |
+          terraform init -reconfigure
+          terraform plan -out=tfplan
 
       - name: Terraform Apply Infra
         working-directory: flask-app/infra
-        run: terraform apply -auto-approve tfplan
+        run: |
+          terraform init -reconfigure
+          terraform apply -auto-approve tfplan
 
       ####################################################################
       # שלב 5: Build & Push Docker Image ל-ECR
