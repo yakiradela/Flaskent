@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:  
-  repository: 557690607676.dkr.ecr.us-east-2.amazonaws.com/flask-app-repo
+  repository: 557690607676.dkr.ecr.us-east-2.amazonaws.com/flask-app-repository
   tag: latest
   pullPolicy: IfNotPresent
 
