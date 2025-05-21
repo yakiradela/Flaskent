@@ -2,7 +2,7 @@ module "bootstrap" {
   source = "./bootstrap"
 }
 
-# VPC
+# VPC # יוצר את ה vpc עם dns 
 resource "aws_vpc" "main_vpc" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
@@ -11,31 +11,31 @@ resource "aws_vpc" "main_vpc" {
     Name = "main-vpc"
   }
 }
-
+# חיבוריות לאינטרנט עבור ה public subnet
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main_vpc.id
 }
-
+# מספק כתובת ip ל-NAT Gateway ומאפשר לנודים גישה לאינטרנט
 resource "aws_eip" "nat_eip" {
   domain = "vpc"
 }
-
+# משמש כדרך ל private subnet לקבל עדכונים
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat_eip.id
   subnet_id     = aws_subnet.public_subnet.id
   depends_on    = [aws_internet_gateway.igw]
 }
-
+# הגדרת ה dns
 resource "aws_vpc_dhcp_options" "dhcp_options" {
   domain_name_servers = ["AmazonProvidedDNS"]
 }
-
+# הגדרות ה-dhcp של ה-vpc
 resource "aws_vpc_dhcp_options_association" "dhcp_association" {
   vpc_id          = aws_vpc.main_vpc.id
   dhcp_options_id = aws_vpc_dhcp_options.dhcp_options.id
 }
 
-# Subnets
+# Subnets-תתי הרשתות
 resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.main_vpc.id
   cidr_block              = var.public_subnet_cidr
@@ -59,7 +59,7 @@ resource "aws_subnet" "private_subnet" {
   }
 }
 
-# Route Tables
+# Route Tables-טבלאות הניתוב (public שולח ניתוב לinternetgateway),(private שולח תעבורה לnat gateway)
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main_vpc.id
 
@@ -88,7 +88,7 @@ resource "aws_route_table_association" "private_assoc" {
   route_table_id = aws_route_table.private.id
 }
 
-# EKS Cluster
+# EKS Cluster הגדרת הקלאסטר כולל שני נודים שיתפקדו כec2-t3.medium שרצים בשני תתי הרשתות
 resource "aws_eks_cluster" "eks_cluster" {
   name     = var.eks_cluster_name
   role_arn = aws_iam_role.eks_cluster_role.arn
@@ -141,7 +141,7 @@ resource "aws_eks_node_group" "node_group_private" {
   }
 }
 
-# ECR Repository
+# ECR Repository 'הגדרת רפו עבור אחסון האימג
 resource "aws_ecr_repository" "flask_app_ecr" {
   name = "flask-app-repository"
 }
