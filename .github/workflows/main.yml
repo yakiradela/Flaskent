@@ -7,7 +7,7 @@ on:
 
 env:
   AWS_REGION: us-east-2
-  ECR_REPOSITORY: flask-app-repo
+  ECR_REPOSITORY: flask-app-repository
   CLUSTER_NAME: eks-cluster
   ECR_URL: 557690607676.dkr.ecr.us-east-2.amazonaws.com
 
