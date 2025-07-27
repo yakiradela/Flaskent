@@ -14,11 +14,11 @@
 ---
 
 ## folder structure
-flask-app/app - קוד בFlask ו-Dockerfile
-flask-app/infra - קבצי Terraform לתשתית
-flask-app/helm/flask-app - לפריסה 
-.github/workflows - להרצה אוטומטית של האפלקצייה המלאה 
+- **flask-app/app** - קוד בFlask ו-Dockerfile
+- **flask-app/infra** - קבצי Terraform לתשתית
+- **flask-app/helm/flask-app** - לפריסה 
+- **.github/workflows** - להרצה אוטומטית של האפלקצייה המלאה 
 
 ## keys
-AWS_ACCESS_KEY_ID
-AWS_SECRET_ACCESS_KEY
+- **AWS_ACCESS_KEY_ID**
+- **AWS_SECRET_ACCESS_KEY**
